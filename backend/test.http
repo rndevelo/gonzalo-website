@@ -1,0 +1,33 @@
+### GET Projects
+GET http://localhost:8080/api/projects
+Content-Type: application/json
+
+###
+
+### GET Skills  
+GET http://localhost:8080/api/skills
+Content-Type: application/json
+
+###
+
+### POST Contact Message
+POST http://localhost:8080/api/contact
+Content-Type: application/json
+
+{
+  "name": "Gonzalo Lorendo",
+  "email": "gonzalo@example.com", 
+  "subject": "Consulta desde portfolio",
+  "message": "Hola, me interesa tu trabajo como Android Developer"
+}
+
+###
+
+### POST Invalid Contact (test error handling)
+POST http://localhost:8080/api/contact
+Content-Type: application/json
+
+{
+  "name": "Test",
+  "email": "invalid-email"
+}
