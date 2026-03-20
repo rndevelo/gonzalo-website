@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Contact form handling
     const contactForm = document.getElementById('contact-form');
     if (contactForm) {
-        contactForm.addEventListener('submit', function(e) {
+        contactForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
             // Get form values
@@ -101,14 +101,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // TODO: aquí irá el fetch() POST a la API Ktor cuando el servidor esté listo
-            // fetch('http://localhost:8080/api/contact', { method: 'POST', ... })
-            
-            // Simulate form submission
-            showNotification('Message sent successfully! I\'ll get back to you soon.', 'success');
-            
-            // Reset form
-            contactForm.reset();
+            // Enviar a la API de Vercel
+            try {
+                const response = await fetch('/api/contact', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name, email, subject, message }),
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showNotification(result.message || 'Message sent successfully! I\'ll get back to you soon.', 'success');
+                    contactForm.reset();
+                } else {
+                    showNotification(result.message || 'Failed to send message. Please try again.', 'error');
+                }
+            } catch (error) {
+                console.error('Form submission error:', error);
+                showNotification('Network error. Please try again later.', 'error');
+            }
         });
     }
     
