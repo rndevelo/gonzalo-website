@@ -44,6 +44,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Start typing effect
     typeText();
     
+    // Cargar proyectos desde la API
+    loadProjectsFromAPI();
+    
     // Mobile menu functionality
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
     const mobileMenu = document.getElementById('mobile-menu');
@@ -251,12 +254,36 @@ window.addEventListener('scroll', function() {
     });
 });
 
-// Esta función reemplazará el HTML hardcodeado de los proyectos
-// Llamará a GET /api/projects y construirá las cards dinámicamente
+// Cargar proyectos desde la API
 async function loadProjectsFromAPI() {
-    // TODO paso 3: conectar a Ktor
-    // Equivalente en Android: 
-    // - Retrofit: @GET("/api/projects") suspend fun getProjects(): List<Project>
-    // - ViewModel: val projects = repository.getProjects().asStateFlow()
-    // - Compose: LazyColumn con items(projects) { ProjectCard(it) }
+    try {
+        const response = await fetch('/api/test');
+        const data = await response.json();
+        
+        if (response.ok && data.sampleData.projects) {
+            renderProjects(data.sampleData.projects);
+        } else {
+            console.error('Error loading projects from API');
+        }
+    } catch (error) {
+        console.error('API call failed:', error);
+    }
+}
+
+// Renderizar proyectos dinámicamente
+function renderProjects(projects) {
+    const projectsContainer = document.querySelector('#projects .grid');
+    if (!projectsContainer) return;
+
+    projectsContainer.innerHTML = projects.map(project => `
+        <div class="card-hover bg-white rounded-lg shadow-lg p-6 transition-all duration-300">
+            <h3 class="text-xl font-bold text-gray-800 mb-2">${project.title}</h3>
+            <p class="text-gray-600 mb-4">${project.description}</p>
+            <div class="flex flex-wrap gap-2">
+                ${project.tech.map(tech => `
+                    <span class="px-3 py-1 bg-purple-100 text-purple-600 rounded-full text-sm">${tech}</span>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
 }
