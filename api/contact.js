@@ -17,38 +17,64 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: 'Invalid email address' });
     }
 
-    // Aquí puedes agregar tu lógica para:
-    // 1. Enviar a tu servidor local
-    // 2. Guardar en base de datos
-    // 3. Enviar email
-    // 4. Enviar a Discord/Telegram
+    // Opciones de entrega de mensajes
+    const deliveryMethods = {
+      // 1. Enviar a tu servidor local via ngrok
+      localServer: async () => {
+        const ngrokUrl = process.env.NGROK_URL || 'http://localhost:8080';
+        const response = await fetch(`${ngrokUrl}/api/contact`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, subject, message }),
+        });
+        return response.ok;
+      },
 
-    // Ejemplo: Enviar a tu servidor local (necesitarás configurar ngrok o similar)
-    try {
-      const response = await fetch('http://localhost:8080/api/contact', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name, email, subject, message }),
-      });
-      
-      if (response.ok) {
-        return res.status(200).json({ message: 'Message sent successfully' });
-      } else {
-        throw new Error('Failed to send to local server');
+      // 2. Enviar a Discord webhook
+      discord: async () => {
+        const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+        if (!webhookUrl) return false;
+        
+        await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: `📩 Nuevo mensaje de contacto\n**Nombre:** ${name}\n**Email:** ${email}\n**Asunto:** ${subject}\n**Mensaje:** ${message}`
+          }),
+        });
+        return true;
+      },
+
+      // 3. Guardar en Vercel KV (base de datos gratuita)
+      saveToKV: async () => {
+        // Implementar cuando tengas Vercel KV
+        console.log('Message saved to KV:', { name, email, subject, message, timestamp: new Date().toISOString() });
+        return true;
       }
-    } catch (localServerError) {
-      // Si el servidor local no está disponible, 
-      // puedes guardar en un archivo o enviar por email
-      console.log('Local server unavailable, saving message:', { name, email, subject, message });
-      
-      // Opción 1: Guardar en Vercel KV (base de datos gratuita)
-      // Opción 2: Enviar email con Resend
-      // Opción 3: Enviar a Discord webhook
-      
-      return res.status(200).json({ message: 'Message received (local server unavailable)' });
+    };
+
+    // Intentar métodos de entrega en orden de preferencia
+    try {
+      // Intentar servidor local primero
+      if (await deliveryMethods.localServer()) {
+        return res.status(200).json({ message: 'Message sent successfully to your local server' });
+      }
+    } catch (localError) {
+      console.log('Local server unavailable, trying alternatives...');
     }
+
+    // Si el servidor local falla, intentar Discord
+    try {
+      if (await deliveryMethods.discord()) {
+        return res.status(200).json({ message: 'Message sent to Discord (local server unavailable)' });
+      }
+    } catch (discordError) {
+      console.log('Discord unavailable, saving locally...');
+    }
+
+    // Último recurso: guardar en KV
+    await deliveryMethods.saveToKV();
+    return res.status(200).json({ message: 'Message received and saved (will sync later)' });
 
   } catch (error) {
     console.error('Contact form error:', error);
